@@ -1,0 +1,358 @@
+using System;
+using Microsoft.SharePoint;
+using Microsoft.SharePoint.WebControls;
+using System.Data;
+using System.Collections.Generic;
+using System.Text;
+
+namespace CHAIPROJTEST.Layouts.CHAIPROJTEST
+{
+    public partial class Experiment : LayoutsPageBase
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            if (!IsPostBack)
+            {
+
+                SPWeb web = SPContext.Current.Web;
+                SPList lstProjects = web.Lists.TryGetList("CAProject");
+
+
+                DataTable dt = lstProjects.Items.GetDataTable();
+                BindData(dt);
+            }
+
+        }
+
+        protected void btnSearch_Click(object sender, EventArgs e)
+        {
+            SPWeb web = SPContext.Current.Web;
+            SPList lstProjects = web.Lists.TryGetList("CAProject");
+            //   GetDynamicQuery();
+
+            SPQuery resultQuery = new SPQuery();
+            resultQuery.Query = GetDynamicQuery();
+
+            DataTable dtResultSet = new DataTable();
+            dtResultSet = lstProjects.GetItems(resultQuery).GetDataTable();
+            if (dtResultSet != null)
+            {
+                BindData(dtResultSet);
+            }
+            txtQUERY.Text = GetDynamicQuery();
+            Response.Write(GetDynamicQuery());
+
+        }
+        public string GetDynamicQuery()
+        {
+            IList<CamlQueryElements> camlIlist = AddElement();
+            string dyanmicCamlQuery = GenerateQuery(camlIlist);
+            return dyanmicCamlQuery;
+        }
+        // This function loop List of camlqueryelments which has our filter criteria
+        // Then generate query in required format.
+        // At end it return string which holds caml query.
+        public string GenerateQuery(IList<CamlQueryElements> lstOfElement)
+        {
+            StringBuilder queryJoin = new StringBuilder();
+            string query = @"<{0}><FieldRef Name='{1}' /><Value {2} Type='{3}'>{4}</Value></{5}>";
+            if (lstOfElement.Count > 0)
+            {
+                int itemCount = 0;
+                foreach (CamlQueryElements element in lstOfElement)
+                {
+                    itemCount++;
+                    string date = string.Empty;
+                    // Display only Date
+                    if (String.Compare(element.FieldType, "DateTime", true) == 0)
+                        date = "IncludeTimeValue='false'";
+                    queryJoin.AppendFormat
+                   (string.Format(query, element.ComparisonOperators, element.FieldName,
+                       date, element.FieldType, element.FieldValue, element.ComparisonOperators));
+
+                    if (itemCount >= 2)
+                    {
+                        queryJoin.Insert(0, string.Format("<{0}>", element.LogicalJoin));
+                        queryJoin.Append(string.Format("</{0}>", element.LogicalJoin));
+                    }
+                }
+                queryJoin.Insert(0, "<Where>");
+                queryJoin.Append("</Where>");
+            }
+            return queryJoin.ToString();
+        }
+
+
+
+        public IList<CamlQueryElements> AddElement()
+        {
+            IList<CamlQueryElements> lstOfElement = new List<CamlQueryElements>();
+
+            string projName = txtProjectName.Text;
+            string projManager = txtProjectManager.Text;
+            string projDivision = txtProjectDivision.Text;
+            string projPhase = txtMethodology.Text;
+
+            #region commentedcode
+            if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+            {
+                AddProjectNameElement(lstOfElement, "And");
+                AddProjectManagerElement(lstOfElement);
+                AddProjectDivisionElement(lstOfElement);
+                AddPhaseMethodologyElement(lstOfElement);
+            }
+
+
+ //1
+            else if (!string.IsNullOrEmpty(projName) && string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+            {
+                AddProjectNameElement(lstOfElement, "And");
+            }
+            //2
+            else if (string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+            {
+                AddProjectManagerElement(lstOfElement);
+            }
+
+            //3
+            else if (string.IsNullOrEmpty(projName) && string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+            {
+                AddProjectDivisionElement(lstOfElement);
+            }
+
+            //4
+            else if (string.IsNullOrEmpty(projName) && string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+            {
+                AddPhaseMethodologyElement(lstOfElement);
+            }
+
+
+
+            //12
+            else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager))
+            {
+                //123
+                if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                }
+                //124
+                else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+                else
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                }
+            }
+
+            //1 3
+            else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projDivision))
+            {
+
+                //123
+                if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                }
+                //134
+                else if (!string.IsNullOrEmpty(projName) && string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectDivisionElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+
+                else
+                {
+
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectDivisionElement(lstOfElement);
+
+                }
+
+            }
+
+             //1 4
+            else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projPhase))
+            {
+                //134
+                if (!string.IsNullOrEmpty(projName) && string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectDivisionElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+                else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+                else
+                {
+
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+            }
+
+           // 2 3
+            else if (!string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision))
+            { //123
+                if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                }
+
+                 //234
+                else if (string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+                else
+                {
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                }
+            }
+
+            //2 4
+            else if (!string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projPhase))
+            {
+               //234
+                  if (string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && !string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectManagerElement(lstOfElement);
+                    AddProjectDivisionElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }
+
+                  //124
+                else if (!string.IsNullOrEmpty(projName) && !string.IsNullOrEmpty(projManager) && string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+                {
+                    AddProjectNameElement(lstOfElement, "And");
+                    AddProjectManagerElement(lstOfElement);
+                    AddPhaseMethodologyElement(lstOfElement);
+                }else{
+                AddProjectManagerElement(lstOfElement);
+                AddPhaseMethodologyElement(lstOfElement);
+                }
+            }
+
+                //3 4
+            else if (!string.IsNullOrEmpty(projDivision) && !string.IsNullOrEmpty(projPhase))
+            {
+                AddProjectDivisionElement(lstOfElement);
+                AddPhaseMethodologyElement(lstOfElement);
+            }
+            else
+            {
+                SPWeb web = SPContext.Current.Web;
+                SPList lstProjects = web.Lists.TryGetList("CAProject");
+                DataTable dt = lstProjects.Items.GetDataTable();
+                BindData(dt);
+            }
+
+
+
+
+            #endregion
+
+
+
+
+
+
+            /*
+              similarly we can add n number of elements
+              You can change this code to fill your criteria as per your web app.
+              But at the end you will return back "IList of CamlQueryElements" object.
+	    */
+
+            return lstOfElement;
+        }
+
+        private void AddPhaseMethodologyElement(IList<CamlQueryElements> lstOfElement)
+        {
+            lstOfElement.Add(new CamlQueryElements
+            {
+                ComparisonOperators = "Contains",
+                FieldName = "PhaseMethodology",
+                FieldType = "Choice",
+                FieldValue = txtMethodology.Text,
+                LogicalJoin = "And"  // "And"
+            });
+        }
+
+        private void AddProjectDivisionElement(IList<CamlQueryElements> lstOfElement)
+        {
+            lstOfElement.Add(new CamlQueryElements
+            {
+                ComparisonOperators = "Contains",
+                FieldName = "ProjectDivision",
+                FieldType = "'Choice",
+                FieldValue = txtProjectDivision.Text,
+                LogicalJoin = "And"
+            });
+        }
+
+        private void AddProjectManagerElement(IList<CamlQueryElements> lstOfElement)
+        {
+            lstOfElement.Add(new CamlQueryElements
+            {
+                ComparisonOperators = "Contains",
+                FieldName = "ProjectManager",
+                FieldType = "User",
+                FieldValue = txtProjectManager.Text,
+                LogicalJoin = "And"
+            });
+        }
+
+        private void AddProjectNameElement(IList<CamlQueryElements> lstOfElement, string joinType)
+        {
+            lstOfElement.Add(new CamlQueryElements
+            {
+                ComparisonOperators = "Contains",
+                FieldName = "Title",
+                FieldType = "Text",
+                FieldValue = txtProjectName.Text,
+                LogicalJoin = joinType
+            });
+        }
+        private void BindData(DataTable dtResult)
+        {
+            try
+            {
+                gridPRojects.DataSource = dtResult;
+                gridPRojects.DataBind();
+            }
+            catch (Exception ex)
+            {
+                lblError.Text = ex.Message;
+            }
+        }
+    }
+
+
+    public class CamlQueryElements
+    {
+        public string LogicalJoin { get; set; } // like <Or>, <And>
+        public string ComparisonOperators { get; set; } // like <Eq>, <Contains>
+        public string FieldName { get; set; } // Like Title
+        public string FieldType { get; set; } // Like Text
+        public string FieldValue { get; set; } // some value
+    }
+}
