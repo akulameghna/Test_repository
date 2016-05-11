@@ -1,0 +1,67 @@
+
+//Usage 
+2 function IsCurrentUserWithContributePerms()  
+3 { 
+4   IsCurrentUserMemberOfGroup("Members", function (isCurrentUserInGroup) { 
+5     if(isCurrentUserInGroup) 
+6     { 
+7         // The current user is in the [Members] group 
+8     } 
+9   }); 
+10 
+ 
+11 } 
+12 ExecuteOrDelayUntilScriptLoaded(IsCurrentUserWithContributePerms, 'SP.js'); 
+
+
+
+
+
+
+Raw 
+
+  SP.IsCurrentUserMemberOfGroup.js  Permalink 
+
+
+1 function IsCurrentUserMemberOfGroup(groupName, OnComplete) { 
+2   
+3         var context = new SP.ClientContext.get_current(); 
+4         var currentWeb = context.get_web(); 
+5   
+6         var currentUser = context.get_web().get_currentUser(); 
+7         context.load(currentUser); 
+8   
+9         var allGroups = currentWeb.get_siteGroups(); 
+10         context.load(allGroups); 
+11   
+12         var group = allGroups.getByName(groupName); 
+13         context.load(group); 
+14          
+15         var groupUsers = group.get_users(); 
+16         context.load(groupUsers); 
+17   
+18         context.executeQueryAsync( 
+19                 function(sender, args) { 
+20                    var userInGroup = IsUserInGroup(currentUser,group);          
+21                    OnComplete(userInGroup); 
+22                 }, 
+23                 function OnFailure(sender, args) { 
+24                    OnComplete(false); 
+25                 } 
+26         ); 
+27          
+28         function IsUserInGroup(user,group) 
+29         { 
+30             var groupUsers = group.get_users(); 
+31             var userInGroup = false; 
+32             var groupUserEnumerator = groupUsers.getEnumerator(); 
+33             while (groupUserEnumerator.moveNext()) { 
+34                 var groupUser = groupUserEnumerator.get_current(); 
+35                 if (groupUser.get_id() == user.get_id()) { 
+36                     userInGroup = true; 
+37                     break; 
+38                 } 
+39             } 
+40             return userInGroup; 
+41         } 
+42 } 
